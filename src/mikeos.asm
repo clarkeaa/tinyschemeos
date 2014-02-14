@@ -311,5 +311,74 @@ os_print_newline:
 	popa
 	ret
 
+; ------------------------------------------------------------------
+; os_print_digit -- Displays contents of AX as a single digit
+; Works up to base 37, ie digits 0-Z
+; IN: AX = "digit" to format and print
+
+os_print_digit:
+	pusha
+
+	cmp ax, 9			; There is a break in ASCII table between 9 and A
+	jle .digit_format
+
+	add ax, 'A'-'9'-1		; Correct for the skipped punctuation
+
+.digit_format:
+	add ax, '0'			; 0 will display as '0', etc.	
+
+	mov ah, 0Eh			; May modify other registers
+	int 10h
+
+	popa
+	ret
 
 	
+; ------------------------------------------------------------------
+; os_print_1hex -- Displays low nibble of AL in hex format
+; IN: AL = number to format and print
+
+os_print_1hex:
+	pusha
+
+	and ax, 0Fh			; Mask off data to display
+	call os_print_digit
+
+	popa
+	ret
+
+
+; ------------------------------------------------------------------
+; os_print_2hex -- Displays AL in hex format
+; IN: AL = number to format and print
+
+os_print_2hex:
+	pusha
+
+	push ax				; Output high nibble
+	shr ax, 4
+	call os_print_1hex
+
+	pop ax				; Output low nibble
+	call os_print_1hex
+
+	popa
+	ret
+
+
+; ------------------------------------------------------------------
+; os_print_4hex -- Displays AX in hex format
+; IN: AX = number to format and print
+
+os_print_4hex:
+	pusha
+
+	push ax				; Output high byte
+	mov al, ah
+	call os_print_2hex
+
+	pop ax				; Output low byte
+	call os_print_2hex
+
+	popa
+	ret

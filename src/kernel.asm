@@ -27,18 +27,88 @@ os_main:
 	
 	mov si, msg
 	call os_print_string
-read:	
+repl:	
 	mov si, prompt
 	call os_print_string
 
 	call os_input_string
+	mov si, ax	
 	call os_print_newline
-
-	mov si, scheme_error
-	call os_print_string
 	
-	jmp read
+	call scheme_read
+	cmp ax, 0x0
+	je repl
+	
+	call scheme_eval
+	cmp ax, 0x0
+	je repl
+	
+	call scheme_print
+		
+	jmp repl
 
+;//////////////////////////////////////////////////////////////////////////////////////
+
+%define SCHEME_TYPE_ERROR 0x0
+%define SCHEME_TYPE_INT 0x1
+%define SCHEME_TYPE_STRING 0x2
+%define SCHEME_TYPE_LIST 0x3
+	
+; -----------------------------------------------------
+; IN: SI = location of sexp
+; OUT: AX = 0 on error, otherwise we are good
+scheme_read:
+	pusha
+	mov ax, 0
+	mov cx, 0
+.loop:	
+	lodsb
+
+	cmp ax, 0x0
+	je .check_parens	
+	cmp ax, '('
+	je .open_paren
+	cmp ax, ')'
+	je .close_paren
+
+	jmp .loop
+	
+.open_paren:
+	add cx, 1
+	jmp .loop
+.close_paren:
+	sub cx, 1
+	jmp .loop
+
+.check_parens:
+	mov word [.answer], 1
+	cmp cx, 0
+	je .exit
+
+	mov word [.answer], 0
+	mov si, paren_mismatch_error
+	call os_print_string
+.exit:	
+	popa
+	mov ax, [.answer]	
+	ret
+	.answer dw 0
+
+; -----------------------------------------------------
+; IN: none, reads off stack
+; OUT: AX = result meta, BX = result
+scheme_eval:	
+	pusha
+	popa
+	ret
+
+; -----------------------------------------------------
+; IN: AX = result meta, BX = result
+scheme_print:	
+	pusha
+	popa
+	ret	
+	
 ;//////////////////////////////////////////////////////////////////////////////////////
 	%include "mikeos.asm"
 	%include "disk.asm"
@@ -48,4 +118,4 @@ read:
 msg db "welcome to tinyschemeos",0x0d, 0x0a, 0	
 prompt db ">",0
 scheme_error db "* unknown scheme error",0x0d,0x0a,0
-	
+paren_mismatch_error db "error: parameter mismatch",0x0d,0x0a,0
