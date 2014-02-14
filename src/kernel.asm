@@ -27,9 +27,17 @@ os_main:
 	
 	mov si, msg
 	call os_print_string
+read:	
+	mov si, prompt
+	call os_print_string
 
-loop:
-	jmp loop
+	call os_input_string
+	call os_print_newline
+
+	mov si, scheme_error
+	call os_print_string
+	
+	jmp read
 
 ;//////////////////////////////////////////////////////////////////////////////////////
 	%include "mikeos.asm"
@@ -37,5 +45,7 @@ loop:
 	
 ;//////////////////////////////////////////////////////////////////////////////////////
 
-msg db "hello world!",0x0d, 0x0a, 0	
-
+msg db "welcome to tinyschemeos",0x0d, 0x0a, 0	
+prompt db ">",0
+scheme_error db "* unknown scheme error",0x0d,0x0a,0
+	

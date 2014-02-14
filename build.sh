@@ -31,7 +31,7 @@ rm -rf tmp-loop
 
 mkdir tmp-loop && mount -o loop -t vfat disk_images/tinyschemeos.flp tmp-loop && cp src/kernel.bin tmp-loop/
 
-sleep 0.2
+sleep 1.0
 
 echo ">>> Unmounting loopback floppy..."
 

@@ -179,3 +179,137 @@ os_fatal_error:
 
 	
 	.msg_inform		db '>>> FATAL OPERATING SYSTEM ERROR', 13, 10, 0
+
+; ------------------------------------------------------------------
+; os_get_cursor_pos -- Return position of text cursor
+; OUT: DH, DL = row, column
+
+os_get_cursor_pos:
+	pusha
+
+	mov bh, 0
+	mov ah, 3
+	int 10h				; BIOS interrupt to get cursor position
+
+	mov [.tmp], dx
+	popa
+	mov dx, [.tmp]
+	ret
+
+
+	.tmp dw 0
+
+; ------------------------------------------------------------------
+; os_input_string -- Take string from keyboard entry
+; IN/OUT: AX = location of string, other regs preserved
+; (Location will contain up to 255 characters, zero-terminated)
+
+os_input_string:
+	pusha
+
+	mov di, ax			; DI is where we'll store input (buffer)
+	mov cx, 0			; Character received counter for backspace
+
+
+.more:					; Now onto string getting
+	call os_wait_for_key
+
+	cmp al, 13			; If Enter key pressed, finish
+	je .done
+
+	cmp al, 8			; Backspace pressed?
+	je .backspace			; If not, skip following checks
+
+	cmp al, ' '			; In ASCII range (32 - 126)?
+	jb .more			; Ignore most non-printing characters
+
+	cmp al, '~'
+	ja .more
+
+	jmp .nobackspace
+
+
+.backspace:
+	cmp cx, 0			; Backspace at start of string?
+	je .more			; Ignore it if so
+
+	call os_get_cursor_pos		; Backspace at start of screen line?
+	cmp dl, 0
+	je .backspace_linestart
+
+	pusha
+	mov ah, 0Eh			; If not, write space and move cursor back
+	mov al, 8
+	int 10h				; Backspace twice, to clear space
+	mov al, 32
+	int 10h
+	mov al, 8
+	int 10h
+	popa
+
+	dec di				; Character position will be overwritten by new
+					; character or terminator at end
+
+	dec cx				; Step back counter
+
+	jmp .more
+
+
+.backspace_linestart:
+	dec dh				; Jump back to end of previous line
+	mov dl, 79
+	call os_move_cursor
+
+	mov al, ' '			; Print space there
+	mov ah, 0Eh
+	int 10h
+
+	mov dl, 79			; And jump back before the space
+	call os_move_cursor
+
+	dec di				; Step back position in string
+	dec cx				; Step back counter
+
+	jmp .more
+
+
+.nobackspace:
+	pusha
+	mov ah, 0Eh			; Output entered, printable character
+	int 10h
+	popa
+
+	stosb				; Store character in designated buffer
+	inc cx				; Characters processed += 1
+	cmp cx, 254			; Make sure we don't exhaust buffer
+	jae near .done
+
+	jmp near .more			; Still room for more
+
+
+.done:
+	mov ax, 0
+	stosb
+
+	popa
+	ret
+
+; ------------------------------------------------------------------
+; os_print_newline -- Reset cursor to start of next line
+; IN/OUT: Nothing (registers preserved)
+
+os_print_newline:
+	pusha
+
+	mov ah, 0Eh			; BIOS output char code
+
+	mov al, 13
+	int 10h
+	mov al, 10
+	int 10h
+
+	popa
+	ret
+
+
+	
