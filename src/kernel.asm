@@ -1,5 +1,11 @@
 	BITS 16
 
+	; This is the location in RAM for kernel disk operations, 24K
+	; after the point where the kernel has loaded; it's 8K in size,
+	; because external programs load after it at the 32K point:
+
+	disk_buffer	equ	24576
+
 ;//////////////////////////////////////////////////////////////////////////////////////
 os_main:
 	cli				; Clear interrupts
@@ -26,18 +32,8 @@ loop:
 	jmp loop
 
 ;//////////////////////////////////////////////////////////////////////////////////////
-os_print_string:
-	pusha
-	mov ah, 0x0e			; int 10h teletype function
-.repeat:
-	lodsb				; Get char from string
-	cmp al, 0
-	je .done			; If char is zero, end of string
-	int 0x10			; Otherwise, print it
-	jmp .repeat			; And move on to next char
-.done:
-	popa
-	ret
+	%include "mikeos.asm"
+	%include "disk.asm"
 	
 ;//////////////////////////////////////////////////////////////////////////////////////
 

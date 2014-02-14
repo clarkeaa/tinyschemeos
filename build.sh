@@ -18,8 +18,9 @@ nasm -O0 -w+orphan-labels -f bin -o src/bootload.bin src/bootload.asm || exit
 
 
 echo ">>> Assembling kernel..."
-
-nasm -O0 -w+orphan-labels -f bin -o src/kernel.bin src/kernel.asm || exit
+cd src
+nasm -O0 -w+orphan-labels -f bin -o kernel.bin kernel.asm || exit
+cd ..
 
 echo ">>> Adding bootloader to floppy image..."
 dd status=noxfer conv=notrunc if=src/bootload.bin of=disk_images/tinyschemeos.flp || exit
