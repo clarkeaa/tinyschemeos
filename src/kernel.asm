@@ -27,10 +27,12 @@ os_main:
 	
 	mov si, msg
 	call os_print_string
+
 repl:	
 	mov si, prompt
 	call os_print_string
 
+	mov ax, .input_buffer
 	call os_input_string
 	mov si, ax	
 	call os_print_newline
@@ -47,6 +49,7 @@ repl:
 		
 	jmp repl
 
+	.input_buffer times 255 db 0
 ;//////////////////////////////////////////////////////////////////////////////////////
 
 %define SCHEME_TYPE_ERROR 0x0
@@ -74,10 +77,10 @@ scheme_read:
 	jmp .loop
 	
 .open_paren:
-	add cx, 1
+	inc cx
 	jmp .loop
 .close_paren:
-	sub cx, 1
+	dec cx
 	jmp .loop
 
 .check_parens:
