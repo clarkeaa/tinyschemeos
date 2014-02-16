@@ -1,3 +1,8 @@
+test_all:
+	call test_scheme_pow
+	call test_scheme_string_to_int
+	ret	
+
 test_scheme_string_to_int:
 %macro assert_scheme_string_to_int 2
 	mov si, test_actual_msg

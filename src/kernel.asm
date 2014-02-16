@@ -28,9 +28,9 @@ os_main:
 	mov si, msg
 	call os_print_string
 
-	call test_scheme_pow
-	call test_scheme_string_to_int
+	call test_all
 	call scheme_repl
+	jmp $
 	
 ;//////////////////////////////////////////////////////////////////////////////////////
 	%include "mikeos.asm"
