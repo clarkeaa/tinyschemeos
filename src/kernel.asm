@@ -28,15 +28,6 @@ os_main:
 	mov si, msg
 	call os_print_string
 
-	mov ax, sp
-	call os_print_4hex
-	call os_print_newline
-	push ax
-	mov ax, sp
-	call os_print_4hex
-	call os_print_newline
-	pop ax
-	
 	call test_all
 	call scheme_repl
 	jmp $
