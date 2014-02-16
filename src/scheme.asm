@@ -156,11 +156,12 @@ scheme_string_to_int:
 	lodsb
 	sub al, '0'		;al = number of digit
 	mov dl, al		;dl = number for digit
+	mov dh, 0		
 	mov bx, cx		;bx = count
 	dec bx			;bx-=1
 	mov ax, 10		;ax = 10
 	call scheme_pow		;ax = 10^bx
-	mul dl			;ax = number of digit * 10^loc
+	mul dx			;ax = number of digit * 10^loc
 	mov bx, [.answer]
 	add ax, bx
 	mov [.answer], ax
