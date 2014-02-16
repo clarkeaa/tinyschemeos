@@ -4,10 +4,23 @@
 %define SCHEME_TYPE_LIST 0x3
 %define SCHEME_TYPE_ATOM 0x4
 
+%define SCHEME_CODE_STACK_START 0x1000	
 
 ;//////////////////////////////////////////////////////////////////////////////////////
+
+scheme_prompt db ">",0
+scheme_error db "* unknown scheme error",0x0d,0x0a,0
+scheme_paren_mismatch_error db "error: parameter mismatch",0x0d,0x0a,0
+scheme_code_sp dw SCHEME_CODE_STACK_START
+
+%macro scheme_push_word 1
+	mov word [scheme_code_sp], %1
+	add word [scheme_code_sp], 2
+%endmacro
 	
-scheme_repl:	
+;//////////////////////////////////////////////////////////////////////////////////////
+	
+scheme_repl:		
 	mov si, scheme_prompt
 	call os_print_string
 
@@ -59,23 +72,23 @@ scheme_read:
 		
 ;;; -----
 .read_list:
-	push 0x3000
+	scheme_push_word 0x3000
 	inc cx
 	jmp .loop
 
 ;;; -----
 .read_string:
-	push 0x2000
+	scheme_push_word  0x2000
 	jmp .loop
 
 ;;; -----
 .read_atom:
-	push 0x4000
+	scheme_push_word 0x4000
 	jmp .loop
 
 ;;; -----
 .read_number:
-	push 0x1000
+	scheme_push_word 0x1000
 	mov di, .read_buffer	; start writing to read_buffer
 .read_number_loop:
 	stosb
@@ -96,7 +109,7 @@ scheme_read:
 	call scheme_string_to_int ;ax = int, bx = err
 	cmp bx, 0		; exit on error
 	jne .read_error		
-	push ax			; put number on stack
+	scheme_push_word ax	; put number on stack
 	mov al, dl		; restore read character
 	jmp .loop_decide
 
@@ -155,7 +168,7 @@ scheme_string_to_int:
 	je .exit	
 	lodsb
 	sub al, '0'		;al = number of digit
-	mov dl, al		;dl = number for digit
+	mov dl, al		;dx = number for digit
 	mov dh, 0		
 	mov bx, cx		;bx = count
 	dec bx			;bx-=1
@@ -199,6 +212,3 @@ scheme_pow:
 	
 ;//////////////////////////////////////////////////////////////////////////////////////
 	
-scheme_prompt db ">",0
-scheme_error db "* unknown scheme error",0x0d,0x0a,0
-scheme_paren_mismatch_error db "error: parameter mismatch",0x0d,0x0a,0
