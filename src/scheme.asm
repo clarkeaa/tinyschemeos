@@ -14,32 +14,58 @@ scheme_paren_mismatch_error db "error: parameter mismatch",0x0d,0x0a,0
 scheme_code_sp dw SCHEME_CODE_STACK_START
 
 %macro scheme_push_word 1
-	mov word [scheme_code_sp], %1
+	pusha
+	mov ax, %1
+	mov bx, [scheme_code_sp] 	;get address
+	mov [bx], ax	
 	add word [scheme_code_sp], 2
+	popa
+%endmacro
+
+%macro scheme_pop_word 1
+	mov word %1, [scheme_code_sp]
+	sub word [scheme_code_sp], 2
+%endmacro
+
+%macro scheme_debug_4hex 2
+	pusha
+	mov si, %%msg
+	call os_print_string
+	mov ax, %2
+	call os_print_4hex
+	call os_print_newline	
+	popa
+	jmp %%exit
+	%%msg db %1,0
+%%exit:	
 %endmacro
 	
 ;//////////////////////////////////////////////////////////////////////////////////////
 	
 scheme_repl:		
-	mov si, scheme_prompt
+	mov word [scheme_code_sp], SCHEME_CODE_STACK_START ;reset code sp
+	
+	mov si, scheme_prompt           ;print prompt
 	call os_print_string
 
-	mov ax, .input_buffer
+	mov ax, .input_buffer		; input sexp
 	call os_input_string
 	mov si, ax	
 	call os_print_newline
 	
-	call scheme_read
+	call scheme_read		; read
 	cmp ax, 0x0
 	jne scheme_repl
-	
+
+	mov ax, SCHEME_CODE_STACK_START ; eval
 	call scheme_eval
 	cmp ax, 0x0
-	je scheme_repl
-	
+	jne scheme_repl
+
+	mov ax, SCHEME_CODE_STACK_START ;print
 	call scheme_print
-		
-	jmp scheme_repl
+	
+	jmp scheme_repl			; repeat
 
 	.input_buffer times 255 db 0
 	
@@ -72,23 +98,23 @@ scheme_read:
 		
 ;;; -----
 .read_list:
-	scheme_push_word 0x3000
+	scheme_push_word SCHEME_TYPE_LIST
 	inc cx
 	jmp .loop
 
 ;;; -----
 .read_string:
-	scheme_push_word  0x2000
+	scheme_push_word SCHEME_TYPE_STRING
 	jmp .loop
 
 ;;; -----
 .read_atom:
-	scheme_push_word 0x4000
+	scheme_push_word SCHEME_TYPE_ATOM
 	jmp .loop
 
 ;;; -----
 .read_number:
-	scheme_push_word 0x1000
+	scheme_push_word SCHEME_TYPE_INT
 	mov di, .read_buffer	; start writing to read_buffer
 .read_number_loop:
 	stosb
@@ -139,16 +165,41 @@ scheme_read:
 
 ; -----------------------------------------------------
 ; IN: none, reads off stack
-; OUT: AX = result meta, BX = result
+; OUT: AX = err code
 scheme_eval:	
 	pusha
 	popa
+	mov ax, 0x0
 	ret
 
 ; -----------------------------------------------------
-; IN: AX = result meta, BX = result
+; IN: AX = memory location of value
 scheme_print:	
-	pusha
+	pusha	
+
+	mov bx, ax		;bx = meta address
+	mov ax, [bx]		;deref bx
+
+	cmp ax, SCHEME_TYPE_ERROR
+	je .exit
+	cmp ax, SCHEME_TYPE_INT
+	je .print_int
+	cmp ax, SCHEME_TYPE_STRING
+	je .print_string
+	cmp ax, SCHEME_TYPE_LIST
+	je .print_list
+	jmp .exit
+	
+.print_int:		
+	mov ax, [bx+2]
+	call os_print_4hex
+	jmp .exit
+.print_string:
+	jmp .exit
+.print_list:
+	jmp .exit
+.exit:
+	call os_print_newline
 	popa
 	ret
 
