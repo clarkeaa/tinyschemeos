@@ -13,20 +13,6 @@ scheme_error db "* unknown scheme error",0x0d,0x0a,0
 scheme_paren_mismatch_error db "error: parameter mismatch",0x0d,0x0a,0
 scheme_code_sp dw SCHEME_CODE_STACK_START
 
-%macro scheme_push_word 1
-	pusha
-	mov ax, %1
-	mov bx, [scheme_code_sp] 	;get address
-	mov [bx], ax	
-	add word [scheme_code_sp], 2
-	popa
-%endmacro
-
-%macro scheme_pop_word 1
-	mov word %1, [scheme_code_sp]
-	sub word [scheme_code_sp], 2
-%endmacro
-
 %macro scheme_debug_4hex 2
 	pusha
 	mov si, %%msg
@@ -39,6 +25,36 @@ scheme_code_sp dw SCHEME_CODE_STACK_START
 	%%msg db %1,0
 %%exit:	
 %endmacro
+
+;;; -------------------------------
+;;; IN AX - word to push
+_scheme_push_word:	
+	pusha
+	mov bx, [scheme_code_sp] 	;get address
+	mov [bx], ax			;write to address
+	add bx, 2
+	mov word [scheme_code_sp], bx	
+	popa
+	ret
+
+%macro scheme_push_word 1
+	mov ax, %1
+	call _scheme_push_word
+%endmacro
+
+;;; -------------------------------
+;;; OUT AX - word removed from stack
+scheme_pop_word:	
+	pusha
+	mov bx, [scheme_code_sp]
+	sub bx, 2
+	mov ax, [bx]
+	mov [.answer], ax
+	mov word [scheme_code_sp], bx
+	popa
+	mov ax, [.answer]
+	ret
+	.answer dw 0
 	
 ;//////////////////////////////////////////////////////////////////////////////////////
 	
