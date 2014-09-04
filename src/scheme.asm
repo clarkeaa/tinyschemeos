@@ -45,23 +45,26 @@ scheme_code_sp dw SCHEME_CODE_STACK_START
 %endmacro
         
 ;;; -------------------------------
-;;; IN AX - word to push
-_scheme_push_word:	
-	pusha
-	mov bx, [scheme_code_sp] 	;get address
-	mov [bx], ax			;write to address
-	add bx, 2
-	mov word [scheme_code_sp], bx	
-	popa
-	ret
-
 %macro scheme_push_word 1
   pusha        
 	mov ax, %1
-	call _scheme_push_word
+  mov bx, [scheme_code_sp] 	;get address
+	mov [bx], ax			;write to address
+	add bx, 2
+	mov word [scheme_code_sp], bx	
   popa
 %endmacro
 
+%macro scheme_push_byte 1
+  pusha        
+	mov al, %1
+  mov bx, [scheme_code_sp] 	;get address
+	mov [bx], al			;write to address
+	add bx, 1
+	mov word [scheme_code_sp], bx	
+  popa
+%endmacro
+        
 ;;; -------------------------------
 ;;; OUT AX - word removed from stack
 scheme_pop_word:	
@@ -146,8 +149,28 @@ scheme_read:
 ;;; -----
 .read_atom:
 	scheme_push_word SCHEME_TYPE_ATOM
-	jmp .loop
-
+.loop_atom:
+  scheme_push_byte al
+	lodsb
+	cmp al, 0x0		    ;exit at null char
+	je .finish_atom
+	cmp al, ' '		    ;ignore whitespace
+	jb .finish_atom		
+	cmp al, '('		    ;start list
+	je .finish_atom
+	cmp al, ')'		    ;stray close paren
+	je .finish_atom
+	cmp al, 0x22		  ;start string "
+	je .finish_atom
+	cmp al, '0'		    ;start atom
+	jb .loop_atom
+	cmp al, '9'		    ;start number
+	jbe .finish_atom
+	jmp .loop_atom		;start atom       
+.finish_atom:
+  scheme_push_byte 0        
+	jmp .loop_decide
+        
 ;;; -----
 .read_number:
 	scheme_push_word SCHEME_TYPE_INT
