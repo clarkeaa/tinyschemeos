@@ -264,6 +264,10 @@ scheme_eval:
   call os_print_string
   jmp .return
 .eval_function:
+  mov si, bx
+  mov di, .print_stack_name
+  call os_string_compare
+  je .print_stack
   mov si, .unknown_function_error
   call os_print_string
   mov si, bx
@@ -271,6 +275,8 @@ scheme_eval:
   call os_print_newline
   mov WORD [.answer], 1
   jmp .return
+.print_stack:
+  call scheme_print_stack
 .eval_int:
 .return:
 	popa
@@ -279,6 +285,7 @@ scheme_eval:
   .answer dw 0
   .eval_error db "eval error",0x0d,0x0a,0
   .unknown_function_error db "unknown function:",0
+  .print_stack_name db "print-stack",0
 
 ; -----------------------------------------------------
 ; IN: AX = memory location of value
