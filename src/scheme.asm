@@ -222,15 +222,13 @@ scheme_read:
 	.answer dw 0
 	.read_buffer times 255 db 0
 
-; -----------------------------------------------------
-; IN: AX = location in memory to eval
-; OUT: AX = err code
-scheme_eval:	
+;;; --------------------------
+;;; 
+scheme_print_stack:
 	pusha
-  mov bx, ax
+  mov bx, SCHEME_CODE_STACK_START
   scheme_debug_4hex "stack start:", SCHEME_CODE_STACK_START
-  scheme_debug_4hex "stack ptr:", bx
-  scheme_debug_4hex "stack sp:", [scheme_code_sp]
+  scheme_debug_4hex "stack ptr:", [scheme_code_sp]
   cmp bx, scheme_code_sp
   je .return
 .loop:        
@@ -241,8 +239,46 @@ scheme_eval:
 .return:
 	popa
 	mov ax, 0x0
+	ret        
+        
+; -----------------------------------------------------
+; IN: AX = location in memory to eval
+; OUT: AX = err code
+scheme_eval:	
+	pusha
+  mov WORD [.answer], 0
+  mov bx, ax
+  mov ax, [bx]
+  add bx, 2
+  cmp ax, SCHEME_TYPE_INT
+  je .eval_int
+  cmp ax, SCHEME_TYPE_LIST
+  je .eval_list
+.eval_list:
+  mov ax, [bx]
+  add bx, 2
+  cmp ax, SCHEME_TYPE_ATOM
+  je .eval_function
+  mov WORD [.answer], 1
+  mov si, .eval_error
+  call os_print_string
+  jmp .return
+.eval_function:
+  mov si, .unknown_function_error
+  call os_print_string
+  mov si, bx
+  call os_print_string
+  call os_print_newline
+  mov WORD [.answer], 1
+  jmp .return
+.eval_int:
+.return:
+	popa
+	mov ax, [.answer]
 	ret
-  
+  .answer dw 0
+  .eval_error db "eval error",0x0d,0x0a,0
+  .unknown_function_error db "unknown function:",0
 
 ; -----------------------------------------------------
 ; IN: AX = memory location of value
