@@ -26,6 +26,24 @@ scheme_code_sp dw SCHEME_CODE_STACK_START
 %%exit:	
 %endmacro
 
+%macro scheme_debug_mem 1
+	pusha
+	mov si, %%prefix
+	call os_print_string
+	mov ax, %1
+	call os_print_4hex
+	mov si, %%colon
+	call os_print_string
+	mov ax, [%1]
+	call os_print_4hex
+	call os_print_newline	
+	popa
+	jmp %%exit
+	%%prefix db "0x",0
+	%%colon db ":",0
+%%exit:	
+%endmacro
+        
 ;;; -------------------------------
 ;;; IN AX - word to push
 _scheme_push_word:	
@@ -38,8 +56,10 @@ _scheme_push_word:
 	ret
 
 %macro scheme_push_word 1
+  pusha        
 	mov ax, %1
 	call _scheme_push_word
+  popa
 %endmacro
 
 ;;; -------------------------------
@@ -180,13 +200,26 @@ scheme_read:
 	.read_buffer times 255 db 0
 
 ; -----------------------------------------------------
-; IN: none, reads off stack
+; IN: AX = location in memory to eval
 ; OUT: AX = err code
 scheme_eval:	
 	pusha
+  mov bx, ax
+  scheme_debug_4hex "stack start:", SCHEME_CODE_STACK_START
+  scheme_debug_4hex "stack ptr:", bx
+  scheme_debug_4hex "stack sp:", [scheme_code_sp]
+  cmp bx, scheme_code_sp
+  je .return
+.loop:        
+  scheme_debug_mem bx
+  add bx, 2
+	cmp bx, [scheme_code_sp]
+	jl .loop
+.return:
 	popa
 	mov ax, 0x0
 	ret
+  
 
 ; -----------------------------------------------------
 ; IN: AX = memory location of value
